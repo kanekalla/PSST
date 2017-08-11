@@ -150,7 +150,7 @@ def call_sra_variants(alignments_and_info):
                 heterozygous variants in separate lists 
     '''
     sra_alignments = alignments_and_info['alignments']
-    var_info = alignments_and_info['alignments']
+    var_info = alignments_and_info['info']
     keys = alignments_and_info['keys']
     variants = {}
     for sra_acc in keys:
@@ -269,7 +269,6 @@ def unit_tests():
     variants['sra_2'] = {'homozygous':['a','c','d']}
     variants['sra_3'] = {'heterozygous':['b','d','e']}
     matrix = create_variant_matrix(variants)
-    print(matrix)
     for variant_1 in matrix:
         for variant_2 in matrix[variant_1]:
             left_hand_side = matrix[variant_1][variant_2]

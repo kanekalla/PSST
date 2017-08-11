@@ -41,7 +41,7 @@ while getopts ":hs:f:n:d:e:t:p:" opt; do
             SNP_ACC=${OPTARG}
             ;;
         d) # path to the working directory
-            DIR=${OPTARG}
+            DIR=${OPTARG%/}
             ;;
         e) # email address to give to Entrez
             EMAIL=${OPTARG}
@@ -116,7 +116,7 @@ ${SRC}/var_flanks_to_fasta.py -i ${SNP_FLANKS} -o ${SNP_FASTA}
 
 ## Create a BLAST database out of the variant FASTA file
 echo "Creating a BLAST database out of the SNP flanks FASTA file..."
-${SRC}/makeblastdb.sh ${SNP_FASTA} ${DIR}
+${SRC}/makeblastdb.sh ${SNP_FASTA} ${DIR} > /dev/null
 
 ## Align the SRA datasets onto the variants (a la the BLAST database) using Magic-BLAST
 echo "Aligning SRA datasets onto the SNPs..."
