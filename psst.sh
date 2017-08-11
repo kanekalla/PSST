@@ -125,7 +125,7 @@ mkdir -p ${MBO_DIR} # Create the directory if it doesn't exist yet
 
 # Either run Magic-BLAST on list of SRA accessions or on the single FASTQ file
 if [ -n "${SRA_ACC}" ]; then
-    ${SRC}/magicblast_sra.sh ${SRA_ACC} snps_flanks ${MBO_DIR} ${THREADS} ${PROCS}
+    ${SRC}/magicblast_sra.sh ${SRA_ACC} snp_flanks ${MBO_DIR} ${THREADS} ${PROCS}
 else
     ${SRC}/magicblast_fastq.sh ${FASTQ} snp_flanks ${MBO_DIR} ${THREADS}
 fi
