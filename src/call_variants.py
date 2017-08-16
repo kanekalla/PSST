@@ -5,7 +5,7 @@ import getopt
 import sys
 import os
 from itertools import combinations
-from multiprocessing.dummy import Pool
+from multiprocessing import Pool
 # Project-specific packages
 from queries_with_ref_bases import query_contains_ref_bases
 
@@ -26,22 +26,19 @@ def get_mbo_paths(directory):
             paths[accession] = path
     return paths
 
-def get_sra_alignments(map_paths_and_partition):
+def get_sra_alignments(mbo_paths,accessions):
     '''
     Given a list of paths as described in the function get_mbo_paths, retrieves the BTOP string for each
     alignment.
     Inputs
-    - map_paths_and_partition: a dict which contains the following:
-        - partition: the list of paths to .mbo files to read
-        - paths: a list of pairs where the first entry of the pair is the accession and the second is the path
+    - sra_accessions: the list of paths to .mbo files to read
+    - mbo_paths: a list of pairs where the first entry of the pair is the accession and the second is the path
     Outputs
     - a dictionary where keys are SRA accessions and the values are alignment dictionaries
     '''
-    paths = map_paths_and_partition['paths']
-    partition = map_paths_and_partition['partition']
     sra_alignments = {}
-    for accession in partition:
-        path = paths[accession]
+    for accession in sra_accessions:
+        path = mbo_paths[accession]
         alignments = []    
         with open(path,'r') as mbo:
             for line in mbo:
@@ -111,23 +108,25 @@ def call_variants(var_freq):
             pass
     return variants
 
-def call_sra_variants(alignments_and_info):
+def call_sra_variants(sra_partition):
     '''
     For all SRA accession, determines which variants exist in the SRA dataset    
     Inputs
     - alignments_and_info: a dict which contains
-        - sra_alignments: dict where the keys are SRA accessions and the values are lists of alignment dicts
-        - var_info: dict where the keys are variant accessions and the values are information concerning the variants
-        - keys: list which contains the keys of the SRA accessions to analyze
+        - mbo
+        - info
+        - accessions
     Outputs
     - variants: dict where the keys are SRA accessions and the value is another dict that contains the homozgyous and 
                 heterozygous variants in separate lists 
     '''
-    sra_alignments = alignments_and_info['alignments']
-    var_info = alignments_and_info['info']
-    keys = alignments_and_info['keys']
+    mbo_paths = sra_partition['mbo']
+    var_info = sra_partition['info']
+    accessions = sra_partition['accessions']
+
+    sra_alignments = get_sra_alignments(mbo_paths,accessions)
     variants = {}
-    for sra_acc in keys:
+    for sra_acc in sra_alignments:
         alignments = sra_alignments[sra_acc]
         var_freq = {}
         for alignment in alignments:
@@ -312,26 +311,14 @@ if __name__ == "__main__":
         sys.exit(1)
 
     var_info = get_var_info(var_info_path)
-    paths = get_mbo_paths(mbo_directory)
+    mbo_paths = get_mbo_paths(mbo_directory)
 
-    # Retrieve the alignments concurrently
-    get_alignments_threads = min(threads,len(paths.keys()))
-    paths_partitions = partition( paths.keys(), get_alignments_threads )
-    paths_and_partitions = [{'paths':paths,'partition':path_partition} for path_partition in paths_partitions]
-    pool = Pool(processes=get_alignments_threads)
-    sra_alignments_pool = pool.map(get_sra_alignments,paths_and_partitions)
-    pool.close()
-    pool.join()
-    sra_alignments = combine_list_of_dicts(sra_alignments_pool) 
-
-    # Call variants concurrently
-    sra_keys = sra_alignments.keys()
-    variant_call_threads = min( threads, len(sra_keys) )
-    keys_partitions = partition(sra_keys, variant_call_threads)
-    # alignments, info and key partitions
-    alignments_and_info_part = [{'alignments':sra_alignments,'keys':keys,'info':var_info} for keys in keys_partitions]
-    pool = Pool(processes=variant_call_threads)
-    variants_pool = pool.map(call_sra_variants,alignments_and_info_part)
+    accession_partitions = partition(mbo_paths.keys(), threads) # Partitions of the keys of the mbo dict
+                                                                # corresponds to partition of SRA accessions
+    sra_partitions = [{'mbo_paths':mbo_paths,'accessions':accessions,'info':var_info} \
+                      for accessions in accession_partitions}] 
+    pool = Pool(processes=threads)
+    variants_pool = pool.map(call_sra_variants,sra_partitions)
     pool.close()
     pool.join()
     called_variants = combine_list_of_dicts(variants_pool)
