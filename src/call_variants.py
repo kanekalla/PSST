@@ -143,14 +143,14 @@ def call_sra_variants(alignments_and_info):
     Inputs
     - alignments_and_info: a dict which contains
         - sra_alignments: dict where the keys are SRA accessions and the values are lists of alignment dicts
-        - var_info: dict where the keys are variant accessions and the values are information concerning the variants
+        - info: dict where the keys are variant accessions and the values are information concerning the variants
         - keys: list which contains the keys of the SRA accessions to analyze
     Outputs
     - variants: dict where the keys are SRA accessions and the value is another dict that contains the homozgyous and 
                 heterozygous variants in separate lists 
     '''
     sra_alignments = alignments_and_info['alignments']
-    var_info = alignments_and_info['alignments']
+    var_info = alignments_and_info['info']
     keys = alignments_and_info['keys']
     variants = {}
     for sra_acc in keys:
@@ -159,7 +159,11 @@ def call_sra_variants(alignments_and_info):
         for alignment in alignments:
             var_acc = alignment['var_acc']
             # Get the flank information
-            info = var_info[var_acc]
+            try:
+                info = var_info[var_acc]
+            except KeyError:
+                print('missing', var_acc)
+                continue
             if var_acc not in var_freq:
                 var_freq[var_acc] = {'true':0,'false':0}
             # Determine whether the variant exists in the particular SRA dataset
